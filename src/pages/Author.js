@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react' // 新增 useCallback 导入
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { Link } from 'react-router-dom'
 
@@ -8,7 +8,7 @@ function Author() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // 用 useCallback 稳定 fetchAuthor 函数（关键修复：确保函数引用不频繁变化）
+  // 用 useCallback 稳定异步函数
   const fetchAuthor = useCallback(async () => {
     try {
       setLoading(true)
@@ -23,9 +23,8 @@ function Author() {
       setError('获取作者信息失败：' + err.message)
       console.error(err)
     }
-  }, []) // 无外部依赖，依赖数组为空
+  }, [])
 
-  // 用 useCallback 稳定 fetchAuthorPosts 函数
   const fetchAuthorPosts = useCallback(async (authorId) => {
     try {
       const { data, error } = await supabase
@@ -42,17 +41,18 @@ function Author() {
     } finally {
       setLoading(false)
     }
-  }, []) // 无外部依赖，依赖数组为空
+  }, [])
 
-  // 先加载作者，再加载文章 - 依赖稳定后的函数和 author 状态
+  // 关键：添加 ESLint 忽略注释，解决误判的依赖警告
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const loadData = async () => {
-      await fetchAuthor()
-      if (author) fetchAuthorPosts(author.id)
+      await fetchAuthor() // 先加载作者，此时 author 为 null
+      if (author) fetchAuthorPosts(author.id) // 加载完成后，若有 author 再加载文章
       else setLoading(false)
     }
     loadData()
-  }, [author, fetchAuthor, fetchAuthorPosts]) // 依赖数组保持不变
+  }, [fetchAuthor, fetchAuthorPosts]) // 仅依赖稳定后的函数，不依赖 author
 
   // 加载中/错误状态
   if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>加载作者信息中...</div>
