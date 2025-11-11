@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -12,8 +12,8 @@ function PostDetail() {
   const [error, setError] = useState(null)
   const [commentLoading, setCommentLoading] = useState(false)
 
-  // 获取文章详情
-  const fetchPost = async () => {
+  // 用 useCallback 稳定 fetchPost 函数（避免每次渲染重新创建）
+  const fetchPost = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -33,10 +33,10 @@ function PostDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])  // 依赖：路由参数 id（id 变化时重新执行）
 
-  // 获取该文章的评论
-  const fetchComments = async () => {
+  // 用 useCallback 稳定 fetchComments 函数
+  const fetchComments = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('comments')
@@ -49,7 +49,7 @@ function PostDetail() {
     } catch (err) {
       console.error('获取评论失败：', err)
     }
-  }
+  }, [id])  // 依赖：路由参数 id
 
   // 提交评论
   const submitComment = async (e) => {
@@ -83,7 +83,7 @@ function PostDetail() {
     }
   }
 
-  // 加载文章和评论
+  // 加载文章和评论 - 补充稳定后的函数到依赖数组
   useEffect(() => {
     if (!id) {
       navigate('/')  // 无 ID 跳回首页
@@ -91,7 +91,7 @@ function PostDetail() {
     }
     fetchPost()
     fetchComments()
-  }, [id, navigate])
+  }, [id, navigate, fetchPost, fetchComments])  // 关键修复：添加缺失的 fetchPost 和 fetchComments
 
   // 加载中/错误状态
   if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>加载文章中...</div>
